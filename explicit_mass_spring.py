@@ -16,7 +16,7 @@ frames = 120
 frames_per_second = 30
 substeps = 100
 rho = 1.0
-k = 20000.0
+k = 3000.0
 dt = 1.0 / (frames_per_second * substeps)
 externel_force = ti.Vector([0.0, -9.8, 0.0])
 damping = 0.9999
@@ -58,7 +58,7 @@ def compute_internel_force():
     i = edges[e][0]
     j = edges[e][1]
     x_ij = particle_x[i] - particle_x[j]
-    f_ij = -k * (x_ij - rest_length[e] * x_ij / x_ij.norm())
+    f_ij = -k * (x_ij - rest_length[e] * x_ij / x_ij.norm()) / rest_length[e]
     internel_force[i] += f_ij
     internel_force[j] += (-1.0) * f_ij
   for i in particle_v:
