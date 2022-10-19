@@ -16,10 +16,10 @@ frames = 120
 frames_per_second = 30
 substeps = 100
 rho = 1.0
-k = 3000.0
+k = 600.0
 dt = 1.0 / (frames_per_second * substeps)
 externel_force = ti.Vector([0.0, -9.8, 0.0])
-damping = 0.9999
+damping = 0.999
 
 mesh = TetData(data_path, output_path, frames, frames_per_second)
 

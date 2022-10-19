@@ -33,7 +33,8 @@ class TetData:
     self.geom = UsdGeom.Mesh.Define(self.stage, '/root/bunny')
     self.geom.GetFaceVertexIndicesAttr().Set(self.surface_ids)
     self.geom.GetFaceVertexCountsAttr().Set(self.num_surfaces * [3])
-    self.geom.GetSubdivisionSchemeAttr().Set('none')
+    self.geom.GetSubdivisionSchemeAttr().Set(
+        'bilinear')  # catmullClark, loop, bilinear, none
 
   def render(self, vertices_pos, timecode):
     assert vertices_pos.shape == self.vertices_pos.shape
