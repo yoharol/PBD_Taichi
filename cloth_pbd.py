@@ -9,8 +9,8 @@ ti.init(arch=ti.cpu)
 cloth_size = [1.0, 1.0]
 cloth_grid = [20, 20]
 frame_rate = 30
-substeps = 10
-animation_time = 3.0
+substeps = 50
+animation_time = 4.0
 
 Alpha = 0.0
 
