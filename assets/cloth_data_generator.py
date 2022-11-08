@@ -1,5 +1,4 @@
 import numpy as np
-import taichi as ti
 
 
 class ClothData:
@@ -47,12 +46,3 @@ class ClothData:
     self.fixed_indices = np.array(
         [width_count * (height_count - 1), width_count * height_count - 1],
         dtype=int)
-
-
-"""
-test = ClothData(3, 3, 1.0, 1.0)
-print(test.vertex_position)
-print(test.edges)
-print(test.faces)
-print(test.fixed_indices)
-"""

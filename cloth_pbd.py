@@ -63,7 +63,8 @@ class Cloth:
     self.rest_length = ti.field(dtype=ti.f32, shape=self.edges_count)
     self.edges_lambda = ti.field(dtype=ti.f32, shape=self.edges_count)
 
-    self.stage = Usd.Stage.CreateNew(path.join(output_path, 'cloth.usd'))
+    self.stage = Usd.Stage.CreateNew(
+        path.join(output_path, 'cloth_animation.usdc'))
     self.stage.SetStartTimeCode(1)
     self.stage.SetEndTimeCode(frame_rate * int(animation_time))
     self.stage.SetTimeCodesPerSecond(frame_rate)
@@ -163,7 +164,6 @@ class Cloth:
 
 def main():
   cloth = Cloth()
-
   for frame in range(cloth.total_frames):
     cloth.generate_prediction()
     for _ in range(substeps):
