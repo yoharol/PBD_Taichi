@@ -96,8 +96,14 @@ def compute_rest_status(vert_pos: np.ndarray, edge_indices: np.ndarray,
     x1, x2, x3, x4 = vert_pos[[p1, p2, p3, p4]]
     rest_length[i] = norm(x2 - x1)
 
+    if p4 == -1:
+      rest_angle[i] = -1.0
+      continue
+
     tmp_x1 = np.cross(x2 - x1, x3 - x1)
     tmp_x2 = np.cross(x2 - x1, x4 - x1)
+    assert norm(tmp_x1) != 0.0
+    assert norm(tmp_x2) != 0.0
     rest_angle[i] = np.arccos(
         np.dot(tmp_x1 / norm(tmp_x1), tmp_x2 / norm(tmp_x2)))
   return rest_length, rest_angle

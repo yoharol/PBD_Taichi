@@ -1,4 +1,4 @@
-from pxr import Usd, UsdGeom, Sdf, Vt
+from pxr import Sdf, Vt
 from enum import Enum
 import numpy as np
 
@@ -8,41 +8,40 @@ class TetCustomAttr(Enum):
   VertexOrderAttr = 2
   VertexMassAttr = 3
   TetMassAttr = 4
+  FaceTetIndicesAttr = 5
 
 
 TetCustomAttrNames = {
     TetCustomAttr.TetVertexIndicesAttr: 'tetVertexIndicesAttr',
     TetCustomAttr.VertexOrderAttr: 'vertexOrderAttr',
     TetCustomAttr.VertexMassAttr: 'vertexMassAttr',
-    TetCustomAttr.TetMassAttr: 'tetMassAttr'
+    TetCustomAttr.TetMassAttr: 'tetMassAttr',
+    TetCustomAttr.FaceTetIndicesAttr: 'faceTetIndicesAttr'
 }
 TetCustomAttrDefineType = {
     TetCustomAttr.TetVertexIndicesAttr: Sdf.ValueTypeNames.Int4Array,
     TetCustomAttr.VertexOrderAttr: Sdf.ValueTypeNames.IntArray,
     TetCustomAttr.VertexMassAttr: Sdf.ValueTypeNames.FloatArray,
-    TetCustomAttr.TetMassAttr: Sdf.ValueTypeNames.FloatArray
+    TetCustomAttr.TetMassAttr: Sdf.ValueTypeNames.FloatArray,
+    TetCustomAttr.FaceTetIndicesAttr: Sdf.ValueTypeNames.IntArray
 }
 TetCustomAttrSetType = {
     TetCustomAttr.TetVertexIndicesAttr: Vt.Vec4iArray,
     TetCustomAttr.VertexOrderAttr: Vt.IntArray,
     TetCustomAttr.VertexMassAttr: Vt.FloatArray,
-    TetCustomAttr.TetMassAttr: Vt.FloatArray
+    TetCustomAttr.TetMassAttr: Vt.FloatArray,
+    TetCustomAttr.FaceTetIndicesAttr: Vt.IntArray
 }
 
 
-class TetModel:
+def GetCustomAttr(prim, attr: TetCustomAttr):
+  return np.array(prim.GetAttribute(TetCustomAttrNames[attr]).Get())
 
-  def __init__(self, mesh_filepath, mesh_primpath) -> None:
-    self.stage = Usd.Stage.Open(mesh_filepath)
-    self.mesh_prim = self.stage.GetPrimAtPath(mesh_primpath)
-    self.mesh = UsdGeom.Mesh(self.mesh_prim)
 
-  def GetCustomAttr(self, attr: TetCustomAttr):
-    return np.array(self.mesh_prim.GetAttribute(TetCustomAttrNames[attr]).Get())
-
-  def SetCustomAttr(self, attr: TetCustomAttr, data: np.ndarray):
-    self.mesh_prim.GetAttribute(TetCustomAttrNames[attr]).Set(
-        TetCustomAttrSetType[attr].FromNumpy(data))
-
-  def Save(self):
-    self.stage.Save()
+def SetCustomAttr(prim, attrType: TetCustomAttr, data: np.ndarray):
+  attr = prim.GetAttribute(TetCustomAttrNames[attrType])
+  if not attr.IsValid():
+    attr = prim.CreateAttribute(TetCustomAttrNames[attrType],
+                                TetCustomAttrDefineType[attrType], True,
+                                Sdf.VariabilityUniform)
+  attr.Set(TetCustomAttrSetType[attrType].FromNumpy(data))

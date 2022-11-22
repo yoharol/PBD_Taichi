@@ -1,8 +1,9 @@
 import numpy as np
 
 
-def extract_surface_faces(tet_indices: np.ndarray):
+def extract_surface_faces(vertex_pos: np.ndarray, tet_indices: np.ndarray):
   raw_tet_faces = []
+  raw_tet_id = []
   tet_count = tet_indices.shape[0]
 
   for i in range(tet_count):
@@ -11,12 +12,17 @@ def extract_surface_faces(tet_indices: np.ndarray):
     raw_tet_faces.append([p1, p2, p4])
     raw_tet_faces.append([p1, p3, p4])
     raw_tet_faces.append([p2, p3, p4])
+    raw_tet_id.extend([i] * 4)
   tet_faces = np.array(raw_tet_faces, dtype=int)
-  tet_faces = tet_faces[np.lexsort(
-      (tet_faces[:, 0], tet_faces[:, 1], tet_faces[:, 2]))]
+  tet_id = np.array(raw_tet_id, dtype=int)
+  sort_order = np.lexsort((tet_faces[:, 0], tet_faces[:, 1], tet_faces[:, 2]))
+  tet_faces = tet_faces[sort_order]
+  tet_id = tet_id[sort_order]
   assert tet_faces.shape == (tet_count * 4, 3)
 
   surface_faces_list = []
+  surface_tet_list = []
+  #surface_vertices_list = []
   i = 0
   while i < tet_faces.shape[0]:
     j = i + 1
@@ -24,9 +30,23 @@ def extract_surface_faces(tet_indices: np.ndarray):
       j += 1
     if j == i + 1:
       surface_faces_list.append(i)
+      #surface_vertices_list.extend([tet_faces[i].tolist()])
     i = j
+  #surface_vertex_indices = np.unique(np.array(surface_vertices_list))
 
-  return tet_faces[surface_faces_list]
+  surface_face_indicies = tet_faces[surface_faces_list]
+  surface_face_tetids = tet_id[surface_faces_list]
+
+  for i in range(surface_face_tetids.shape[0]):
+    center = np.sum(vertex_pos[tet_indices[surface_face_tetids[i]]],
+                    axis=0) / 4.0
+    p1, p2, p3 = surface_face_indicies[i]
+    x1, x2, x3 = vertex_pos[surface_face_indicies[i]]
+    if np.dot(x1 - center, np.cross(x3 - x2, x2 - x1)) > 0:
+      p2, p3 = p3, p2
+    surface_face_indicies[i] = [p1, p2, p3]
+
+  return surface_face_tetids, surface_face_indicies
 
 
 def compute_vertex_mass(vert_pos: np.ndarray, tet_indices: np.ndarray):

@@ -1,6 +1,5 @@
-from pxr import Usd, UsdGeom, Vt, Sdf
+from pxr import Vt, Sdf
 import numpy as np
-import global_var
 
 from enum import Enum
 
@@ -19,7 +18,7 @@ class MeshCustomAttr(Enum):
 
 MeshCustomAttrNames = {
     MeshCustomAttr.EdgeVertexIndices: 'edgeVertexIndices',
-    MeshCustomAttr.EdgeSideIndices: 'edgeSideIndices',
+    MeshCustomAttr.EdgeSideIndices: 'edgeSideVertexIndices',
     MeshCustomAttr.EdgeNeibFaceIndices: 'edgeNeibFaceIndices',
     MeshCustomAttr.FaceEdgeIndices: 'faceEdgeIndices',
     MeshCustomAttr.EdgeRestLength: 'edgeRestLength',
@@ -54,20 +53,14 @@ MeshCustomAttrSetType = {
 }
 
 
-class CompleteMesh:
+def GetCustomAttr(prim, attrType: MeshCustomAttr):
+  return np.array(prim.GetAttribute(MeshCustomAttrNames[attrType]).Get())
 
-  def __init__(self, mesh_filepath, mesh_primpath) -> None:
-    self.stage = Usd.Stage.Open(mesh_filepath)
-    self.mesh_prim = self.stage.GetPrimAtPath(mesh_primpath)
-    self.mesh = UsdGeom.Mesh(self.mesh_prim)
 
-  def GetCustomAttr(self, attr: MeshCustomAttr):
-    return np.array(
-        self.mesh_prim.GetAttribute(MeshCustomAttrNames[attr]).Get())
-
-  def SetCustomAttr(self, attr: MeshCustomAttr, data: np.ndarray):
-    self.mesh_prim.GetAttribute(MeshCustomAttrNames[attr]).Set(
-        MeshCustomAttrSetType[attr].FromNumpy(data))
-
-  def Save(self):
-    self.stage.Save()
+def SetCustomAttr(prim, attrType: MeshCustomAttr, data: np.ndarray):
+  attr = prim.GetAttribute(MeshCustomAttrNames[attrType])
+  if not attr.IsValid():
+    attr = prim.CreateAttribute(MeshCustomAttrNames[attrType],
+                                MeshCustomAttrDefineType[attrType], True,
+                                Sdf.VariabilityUniform)
+  attr.Set(MeshCustomAttrSetType[attrType].FromNumpy(data))

@@ -1,6 +1,6 @@
 #usda 1.0
 
-def Xform "bunny_tet"
+def Xform "root"
 {
 
     def Mesh "tet"

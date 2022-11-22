@@ -4,7 +4,7 @@ In this file we show the format of surface data
 
 import numpy as np
 from pxr import Usd, UsdGeom, Sdf, Vt
-from geometry_preprocess import surface_preprocess
+from geometry import mesh_preprocess
 import os
 
 vert_count = 4
@@ -18,10 +18,11 @@ face_indices = np.array([[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]], dtype=int)
 face_vert_counts = np.array([3] * 4, dtype=int)
 
 stage = Usd.Stage.CreateNew(
-    os.path.join(os.getcwd(), 'assets', 'format_example.usda'))
+    os.path.join(os.getcwd(), 'assets', 'mesh_format_example.usda'))
 UsdGeom.Xform.Define(stage, '/root')
 mesh = UsdGeom.Mesh.Define(stage, '/root/mesh')
 mesh_prim = stage.GetPrimAtPath('/root/mesh')
+stage.SetDefaultPrim(mesh_prim)
 
 mesh.GetPointsAttr().Set(vert_pos)
 mesh.GetFaceVertexIndicesAttr().Set(face_indices)
@@ -30,12 +31,12 @@ mesh.GetSubdivisionSchemeAttr().Set('none')
 # mesh.GetDoubleSidedAttr().Set(True)
 
 # generate edge information
-edge_indices, edge_sides, edge_neib, face_edges = surface_preprocess.edge_extractor(
+edge_indices, edge_sides, edge_neib, face_edges = mesh_preprocess.edge_extractor(
     face_indices)
-edge_rest_length, edge_rest_angle = surface_preprocess.compute_rest_status(
+edge_rest_length, edge_rest_angle = mesh_preprocess.compute_rest_status(
     vert_pos, edge_indices, edge_sides)
 
-vert_order, vert_mass, face_mass = surface_preprocess.compute_vert_mass(
+vert_order, vert_mass, face_mass = mesh_preprocess.compute_vert_mass(
     vert_pos, face_indices)
 
 # work with custom usd types and numpy array:
@@ -78,7 +79,34 @@ faceMassAttr = mesh_prim.CreateAttribute('faceMass',
                                          Sdf.VariabilityUniform)
 faceMassAttr.Set(Vt.FloatArray.FromNumpy(face_mass))
 
-surface_preprocess.mesh_verify(edge_indices, edge_sides, edge_neib,
-                               face_indices, face_edges)
+mesh_preprocess.mesh_verify(edge_indices, edge_sides, edge_neib, face_indices,
+                            face_edges)
 
 stage.Save()
+
+import format.mesh
+
+print(
+    format.mesh.GetCustomAttr(mesh_prim,
+                              format.mesh.MeshCustomAttr.EdgeVertexIndices))
+print(
+    format.mesh.GetCustomAttr(mesh_prim,
+                              format.mesh.MeshCustomAttr.EdgeNeibFaceIndices))
+print(
+    format.mesh.GetCustomAttr(mesh_prim,
+                              format.mesh.MeshCustomAttr.EdgeSideIndices))
+print(
+    format.mesh.GetCustomAttr(mesh_prim,
+                              format.mesh.MeshCustomAttr.EdgeRestLength))
+print(
+    format.mesh.GetCustomAttr(mesh_prim,
+                              format.mesh.MeshCustomAttr.EdgeRestAngle))
+print(
+    format.mesh.GetCustomAttr(mesh_prim,
+                              format.mesh.MeshCustomAttr.FaceEdgeIndices))
+print(format.mesh.GetCustomAttr(mesh_prim, format.mesh.MeshCustomAttr.FaceMass))
+print(
+    format.mesh.GetCustomAttr(mesh_prim, format.mesh.MeshCustomAttr.VertexMass))
+print(
+    format.mesh.GetCustomAttr(mesh_prim,
+                              format.mesh.MeshCustomAttr.VertexOrder))
