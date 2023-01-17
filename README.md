@@ -1,4 +1,4 @@
-# Deformable Simulation
+# PBD Taichi
 
 Library for PBD and XPBD, aiming at including most type of constraints on mesh and tetrahedron.
 
