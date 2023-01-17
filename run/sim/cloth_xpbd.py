@@ -28,7 +28,7 @@ def sim(ref_path, ref_prim, output_path, output_prim, export_path):
     cloth_sim.generate_prediction()
     for _ in range(cloth_sim.substeps):
       cloth_sim.solve_length_constraints()
-      #cloth_sim.solve_angle_constraints()
+      cloth_sim.solve_angle_constraints()
     cloth_sim.update_vel()
 
     cloth_sim.render_frame(t)

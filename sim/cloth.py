@@ -39,7 +39,7 @@ class ClothSim:
     self.renderStage.SetTimeCodesPerSecond(fps)
 
     self.stretchAlpha = 0.0
-    self.bendAlpha = 0.0
+    self.bendAlpha = 1e-1
     self.wind = ti.Vector([0.0, 0.0, 6.0])
     self.g = ti.Vector([0.0, -3.0, 0.0])
 
@@ -91,8 +91,8 @@ class ClothSim:
     self.edgeIndices.from_numpy(edgeVertexIndices)
     self.edgeSides.from_numpy(edgeSides)
     self.edgeRestLength.from_numpy(restLength)
-    #self.edgeRestAngle.from_numpy(restAngle)
-    self.edgeRestAngle.fill(0.0)
+    self.edgeRestAngle.from_numpy(restAngle)
+    #self.edgeRestAngle.fill(ti.math.pi)
 
   def render_frame(self, timecode):
     self.meshGeom.GetPointsAttr().Set(value=self.vertX.to_numpy(),
@@ -174,23 +174,23 @@ class ClothSim:
         x2 = self.vertX[i2]
         x3 = self.vertX[i3]
         x4 = self.vertX[i4]
-
-        n1 = ((x2 - x1).cross(x3 - x1)).normalized()
-        n2 = ((x2 - x1).cross(x4 - x1)).normalized()
+        p2 = x2 - x1
+        p3 = x3 - x1
+        p4 = x4 - x1
+        n1 = (p2.cross(p3)).normalized()
+        n2 = (p2.cross(p4)).normalized()
         d = n1.dot(n2)
         if d * d < 1.0:
           C = ti.acos(d) - self.edgeRestAngle[k]
-
-          q3 = (x2.cross(n2) + n1.cross(x2) * d) / (x2.cross(x3)).norm()
-          q4 = (x2.cross(n1) + n2.cross(x2) * d) / (x2.cross(x4)).norm()
-          q2 = -(x3.cross(n2) + n1.cross(x3) * d) / (x2.cross(x3)).norm() - (
-              x4.cross(n1) + n2.cross(x4) * d) / (x2.cross(x4)).norm()
+          q3 = (p2.cross(n2) + n1.cross(p2) * d) / (p2.cross(p3)).norm()
+          q4 = (p2.cross(n1) + n2.cross(p2) * d) / (p2.cross(p4)).norm()
+          q2 = -(p3.cross(n2) + n1.cross(p3) * d) / (p2.cross(p3)).norm() - (
+              p4.cross(n1) + n2.cross(p4) * d) / (p2.cross(p4)).norm()
           q1 = -q2 - q3 - q4
 
-          coe1 = (self.vertMassInv[i1] * ti.pow(q1.norm(), 2) +
-                  self.vertMassInv[i2] * ti.pow(q2.norm(), 2) +
-                  self.vertMassInv[i3] * ti.pow(q3.norm(), 2) +
-                  self.vertMassInv[i4] * ti.pow(q4.norm(), 2)) / (1 - d * d)
+          coe1 = (self.vertMassInv[i1] * q1.norm_sqr() + self.vertMassInv[i2] *
+                  q2.norm_sqr() + self.vertMassInv[i3] * q3.norm_sqr() +
+                  self.vertMassInv[i4] * q4.norm_sqr()) / (1 - d * d)
           delta_lambda = -(C + self.bendAlpha * self.edgeAngleLambda[k] /
                            (self.dt * self.dt)) / (coe1 + self.bendAlpha /
                                                    (self.dt * self.dt))
@@ -199,10 +199,9 @@ class ClothSim:
           self.vertX[
               i1] += self.vertMassInv[i1] * coe2 * q1 * delta_lambda * 0.01
           self.vertX[
-              i2] += self.vertMassInv[i1] * coe2 * q2 * delta_lambda * 0.01
+              i2] += self.vertMassInv[i2] * coe2 * q2 * delta_lambda * 0.01
           self.vertX[
-              i3] += self.vertMassInv[i1] * coe2 * q3 * delta_lambda * 0.01
+              i3] += self.vertMassInv[i3] * coe2 * q3 * delta_lambda * 0.01
           self.vertX[
-              i4] += self.vertMassInv[i1] * coe2 * q4 * delta_lambda * 0.01
-          #print(self.vertX[i1], self.vertX[i2], self.vertX[i3], self.vertX[i4])
+              i4] += self.vertMassInv[i4] * coe2 * q4 * delta_lambda * 0.01
           self.edgeAngleLambda[k] += delta_lambda
