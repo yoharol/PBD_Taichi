@@ -20,7 +20,7 @@ pbd = framework.pbd_framework(g=g,
                               n_vert=trian_mesh.n_vert,
                               v_p=trian_mesh.v_p,
                               dt=dt)
-bend_cons = bend.Bend3D(mesh=trian_mesh, alpha=1e-2)
+bend_cons = bend.Bend3D(mesh=trian_mesh, dt=dt, alpha=1e-2)
 pbd.add_cons(bend_cons)
 
 window = ti.ui.Window("bend test", res=(600, 600), vsync=True)

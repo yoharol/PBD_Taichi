@@ -1,5 +1,6 @@
 import taichi as ti
 from cons.cons import Constraint
+from utils.mathlib import isnan
 
 
 @ti.data_oriented
@@ -43,4 +44,4 @@ class pbd_framework:
 
   def update_cons(self):
     for i in range(self.n_cons):
-      self.cons_list[i].update_cons(self.dt)
+      self.cons_list[i].update_cons()

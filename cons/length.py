@@ -4,7 +4,7 @@ import taichi as ti
 @ti.data_oriented
 class LengthCons:
 
-  def __init__(self, model, alpha=0.0) -> None:
+  def __init__(self, model, dt, alpha=0.0) -> None:
     self.n = model.n_edge
 
     self.pos = model.v_p
@@ -15,7 +15,7 @@ class LengthCons:
     self.rest_length = ti.field(dtype=ti.f32, shape=self.n)
     self.length = ti.field(dtype=ti.f32, shape=self.n)
     self.lambdaf = ti.field(dtype=ti.f32, shape=self.n)
-    self.alpha = alpha
+    self.alpha = alpha / (dt * dt)
 
   @ti.kernel
   def compute_rest_length(self):
@@ -32,11 +32,11 @@ class LengthCons:
   def preupdate_cons(self):
     self.lambdaf.fill(0.0)
 
-  def update_cons(self, dt):
-    self.solve_cons(dt)
+  def update_cons(self):
+    self.solve_cons()
 
   @ti.kernel
-  def solve_cons(self, dt: ti.f32):
+  def solve_cons(self):
     for k in range(self.n):
       i = self.indices[k * 2]
       j = self.indices[k * 2 + 1]
@@ -47,8 +47,7 @@ class LengthCons:
       C = self.length[k] - self.rest_length[k]
       wi = self.invm[i]
       wj = self.invm[j]
-      delta_lambda = -(C + self.alpha * self.lambdaf[k] /
-                       (dt * dt)) / (wi + wj + self.alpha / (dt * dt))
+      delta_lambda = -(C + self.alpha * self.lambdaf[k]) / (wi + wj + self.alpha)
       self.lambdaf[k] += delta_lambda
       xij = xij / xij.norm()
       self.pos[i] += wi * delta_lambda * xij.normalized()

@@ -1,3 +1,7 @@
+# template of constraint class
+import taichi as ti
+
+
 class Constraint:
 
   def __init__(self) -> None:
@@ -10,4 +14,8 @@ class Constraint:
     pass
 
   def update_cons(self):
+    self.solve_cons()
+
+  @ti.kernel
+  def solve_cons(self):
     pass

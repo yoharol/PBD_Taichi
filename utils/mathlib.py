@@ -51,3 +51,14 @@ def sph_kernel3d(r: float, h: float):
   else:
     result = 0.0
   return result * SIGMA3D / ti.pow(h, 2)
+
+
+@ti.kernel
+def isnan(veclist: ti.template()) -> ti.i32:
+  have_nan = 0
+  for i in veclist:
+    if (ti.math.isnan(veclist[i][0]) or ti.math.isnan(veclist[i][1]) or
+        ti.math.isnan(veclist[i][2])):
+      print(i, veclist[i])
+      have_nan = 1
+  return have_nan

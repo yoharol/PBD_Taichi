@@ -7,14 +7,14 @@ from geom import gmesh
 @ti.data_oriented
 class Bend3D:
 
-  def __init__(self, mesh: gmesh.TrianMesh, alpha=0.0) -> None:
+  def __init__(self, mesh: gmesh.TrianMesh, dt, alpha=0.0) -> None:
     self.n = mesh.n_edge
     self.pos = mesh.v_p
     self.pos_ref = mesh.v_p_ref
     self.indices = mesh.e_i
     self.side_indices = mesh.e_sidei
     self.invm = mesh.v_invm
-    self.alpha = alpha
+    self.alpha = alpha / (dt * dt)
 
     self.lambdaf = ti.field(dtype=ti.f32, shape=self.n)
     self.edge_rest_angle = ti.field(dtype=ti.f32, shape=self.n)
@@ -35,6 +35,7 @@ class Bend3D:
         n1 = ((x2 - x1).cross(x3 - x1)).normalized()
         n2 = ((x2 - x1).cross(x4 - x1)).normalized()
         d = n1.dot(n2)
+        d = ti.math.clamp(d, -1.0, 1.0)
         self.edge_rest_angle[k] = ti.acos(d)
 
   def init_rest_status(self):
@@ -43,11 +44,11 @@ class Bend3D:
   def preupdate_cons(self):
     self.lambdaf.fill(0.0)
 
-  def update_cons(self, dt):
-    self.sovle_cons(dt)
+  def update_cons(self):
+    self.sovle_cons()
 
   @ti.kernel
-  def sovle_cons(self, dt: ti.f32):
+  def sovle_cons(self):
     for k in range(self.n):
       if self.side_indices[k * 2 + 1] != -1:
         i1 = self.indices[k * 2]
@@ -75,8 +76,8 @@ class Bend3D:
           coe1 = (self.invm[i1] * q1.norm_sqr() + self.invm[i2] * q2.norm_sqr()
                   + self.invm[i3] * q3.norm_sqr() +
                   self.invm[i4] * q4.norm_sqr()) / (1 - d * d)
-          delta_lambda = -(C + self.alpha * self.lambdaf[k] /
-                           (dt * dt)) / (coe1 + self.alpha / (dt * dt))
+          delta_lambda = -(C + self.alpha * self.lambdaf[k]) / (coe1 +
+                                                                self.alpha)
           coe2 = 1.0 / ti.sqrt(1 - d * d)
           self.pos[i1] += self.invm[i1] * coe2 * q1 * delta_lambda
           self.pos[i2] += self.invm[i2] * coe2 * q2 * delta_lambda
