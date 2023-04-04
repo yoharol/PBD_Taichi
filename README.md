@@ -11,6 +11,7 @@ Library for PBD and XPBD, aiming at including most type of constraints on mesh a
 
 ```shell
 pip install taichi 
+pip install usd-core
 conda install -c conda-forge igl
 ``` 
 
