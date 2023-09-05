@@ -158,3 +158,39 @@ def compute_spring_node_mass(weights_bind: np.ndarray, vert_mass: np.ndarray):
     for j in range(weights_bind.shape[1]):
       node_mass[j] += weights_bind[i, j] * vert_mass[i]
   return node_mass
+
+
+@ti.data_oriented
+class TriangleDistortMeasure:
+
+  def __init__(self, verts_ref: np.ndarray, faces: np.ndarray) -> None:
+    self.n = faces.size // 3
+    self.pos = ti.Vector.field(2, dtype=ti.f32, shape=verts_ref.shape[0])
+    self.pos_ref = ti.Vector.field(2, dtype=ti.f32, shape=verts_ref.shape[0])
+    self.pos_ref.from_numpy(verts_ref)
+    self.indices = ti.field(dtype=ti.i32, shape=faces.size)
+    self.indices.from_numpy(faces.flatten())
+    self.C = ti.field(dtype=ti.f32, shape=self.n)
+
+  def update_verts(self, verts: np.ndarray):
+    self.pos.from_numpy(verts)
+    self.measure_distortion()
+
+  @ti.kernel
+  def measure_distortion(self):
+    for k in range(self.n):
+      a = self.indices[k * 3]
+      b = self.indices[k * 3 + 1]
+      c = self.indices[k * 3 + 2]
+      x_1 = self.pos[a]
+      x_2 = self.pos[b]
+      x_3 = self.pos[c]
+      r_1 = self.pos_ref[a]
+      r_2 = self.pos_ref[b]
+      r_3 = self.pos_ref[c]
+      D = ti.Matrix.cols([x_1 - x_3, x_2 - x_3])
+      B = ti.Matrix.cols([r_1 - r_3, r_2 - r_3]).inverse()
+      F = D @ B
+      C_H = F.determinant() - 1
+      C_D = F.norm_sqr() - 2.0
+      self.C[k] = C_H * C_H + C_D * C_D

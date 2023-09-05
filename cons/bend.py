@@ -7,13 +7,20 @@ from geom import gmesh
 @ti.data_oriented
 class Bend3D:
 
-  def __init__(self, mesh: gmesh.TrianMesh, dt, alpha=0.0) -> None:
-    self.n = mesh.n_edge
-    self.pos = mesh.v_p
-    self.pos_ref = mesh.v_p_ref
-    self.indices = mesh.e_i
-    self.side_indices = mesh.e_sidei
-    self.invm = mesh.v_invm
+  def __init__(self, v_p:ti.MatrixField,  # vertex positions
+               v_p_ref:ti.MatrixField,    # vertex reference positions
+               e_i:ti.Field,              # edge indices
+               e_sidei: ti.Field,         # side vertex indices of edges
+               v_invm:ti.Field,           # vertex inverse mass
+               dt,                        # time step
+               alpha=0.0                  # inverse stiffness
+               ) -> None:
+    self.n = e_i.shape[0] // 2
+    self.pos = v_p
+    self.pos_ref = v_p_ref
+    self.indices = e_i
+    self.side_indices = e_sidei
+    self.invm = v_invm
     self.alpha = alpha / (dt * dt)
 
     self.lambdaf = ti.field(dtype=ti.f32, shape=self.n)

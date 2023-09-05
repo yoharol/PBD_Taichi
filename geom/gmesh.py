@@ -1,45 +1,54 @@
 from igl import read_triangle_mesh
+import numpy as np
 import taichi as ti
 import utils.geom2d as geom2d
 import utils.mathlib as mathlib
 
 
-def triangle_mesh_input(filepath):
-  v, f = read_triangle_mesh(filepath)
-  n_v = v.shape[0]
-  n_f = f.shape[0]
-  return n_v, n_f, v, f.flatten()
-
-
 @ti.data_oriented
 class TrianMesh:
 
-  def __init__(self,
-               filepath,
-               dim=2,
-               rho=1.0,
-               get_edge=True,
-               get_edgeside=True,
-               get_edgeNeib=True,
-               get_faceedge=True):
-    n_vert, n_face, vert, face_indices = triangle_mesh_input(filepath)
-    if dim == 2:
-      vert = mathlib.np_3to2(vert)
+  def __init__(
+      self,
+      verts: np.ndarray,
+      faces: np.ndarray,
+      dim=2,
+      rho=1.0,
+      get_edge=True,  # face edges
+      get_edgeside=True,  # side vertex indices of edges
+      get_edgeNeib=True,  # neighbor face indices of edges
+      get_faceedge=True,  # edge infices of faces
+      scale=1.0,
+      repose=(0.0, 0.0, 0.0)):
+    self.dim = dim
+
+    n_vert = verts.shape[0]
+    n_face = faces.shape[0] // 3
+    if dim == 2 and verts.shape[1] == 3:
+      verts = mathlib.np_3to2(verts)
     edge_indices, edge_sides, edge_neib, face_edges = geom2d.edge_extractor(
-        face_indices)
-    assert face_indices.ndim == 1
+        faces)
+    assert faces.ndim == 1
     n_edge = edge_indices.shape[0] // 2
+
+    verts = verts * scale
+    for i in range(self.dim):
+      verts[:, i] += repose[i]
 
     self.n_vert = n_vert
     self.n_edge = n_edge
     self.n_face = n_face
 
     self.v_p = ti.Vector.field(dim, dtype=ti.f32, shape=n_vert)
-    self.v_p.from_numpy(vert)
+    self.v_p.from_numpy(verts)
     self.v_p_ref = ti.Vector.field(dim, dtype=ti.f32, shape=n_vert)
     self.v_p_ref.copy_from(self.v_p)
+    self.v_p_delta = ti.Vector.field(dim, dtype=ti.f32, shape=n_vert)
     self.f_i = ti.field(dtype=ti.i32, shape=n_face * 3)
-    self.f_i.from_numpy(face_indices.flatten())
+    self.f_i.from_numpy(faces.flatten())
+
+    self.verts_np = verts
+    self.faces_np = faces
 
     if get_edge:
       self.e_i = ti.field(dtype=ti.i32, shape=n_edge * 2)
@@ -56,13 +65,35 @@ class TrianMesh:
 
     self.compute_mass(rho)
 
+  def set_texture_uv(self, uvs: np.ndarray):
+    self.uvs = uvs
+
   def compute_mass(self, rho: float):
     self.v_invm = ti.field(dtype=ti.f32, shape=self.n_vert)
     self.f_mass = ti.field(dtype=ti.f32, shape=self.n_face)
-    self.get_mass(rho)
+    if self.dim == 3:
+      self.get_mass_3d(rho)
+    elif self.dim == 2:
+      self.get_mass_2d(rho)
 
   @ti.kernel
-  def get_mass(self, rho: ti.f32):
+  def get_mass_2d(self, rho: ti.f32):
+    for k in range(self.n_face):
+      p1 = self.f_i[k * 3]
+      p2 = self.f_i[k * 3 + 1]
+      p3 = self.f_i[k * 3 + 2]
+      x1 = self.v_p[p1]
+      x2 = self.v_p[p2]
+      x3 = self.v_p[p3]
+      self.f_mass[k] = rho * 0.5 * ti.abs((x2 - x1).cross(x3 - x1))
+      self.v_invm[p1] += self.f_mass[k] / 3.0
+      self.v_invm[p2] += self.f_mass[k] / 3.0
+      self.v_invm[p3] += self.f_mass[k] / 3.0
+    for k in range(self.n_vert):
+      self.v_invm[k] = 1.0 / self.v_invm[k]
+
+  @ti.kernel
+  def get_mass_3d(self, rho: ti.f32):
     for k in range(self.n_face):
       p1 = self.f_i[k * 3]
       p2 = self.f_i[k * 3 + 1]
@@ -93,3 +124,10 @@ class TrianMesh:
   def set_fixed_point(self, n: ti.i32, index: ti.template()):
     for k in range(n):
       self.v_invm[index[k]] = 0.0
+
+  def get_render_draw(self, color=(0.5, 0.5, 0.5), wireframe=False):
+
+    def render_draw(scene: ti.ui.Scene):
+      scene.mesh(self.v_p, self.f_i, color=color, show_wireframe=wireframe)
+
+    return render_draw

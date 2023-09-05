@@ -1,5 +1,4 @@
 import taichi as ti
-
 from utils.mathlib import *
 
 
@@ -8,11 +7,11 @@ class Deform3D:
 
   def __init__(self,
                n: int,
-               indices,
-               invm,
-               pos,
-               pos_ref,
-               tet_mass,
+               indices:ti.Field,
+               invm:ti.Field,
+               pos:ti.MatrixField,
+               pos_ref:ti.MatrixField,
+               tet_mass:ti.Field,
                hydro_alpha=0.0,
                devia_alpha=0.0) -> None:
     self.n = n
@@ -110,3 +109,4 @@ class Deform3D:
       self.pos[c] += w3 * par_CD_x3 * delta_lambda_D
       self.pos[d] += w4 * par_CD_x4 * delta_lambda_D
       self.devia_lambda[k] += delta_lambda_D
+      
