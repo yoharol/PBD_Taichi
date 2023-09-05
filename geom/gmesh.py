@@ -1,4 +1,4 @@
-from igl import read_triangle_mesh
+# from igl import read_triangle_mesh
 import numpy as np
 import taichi as ti
 import utils.geom2d as geom2d

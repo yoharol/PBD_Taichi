@@ -45,9 +45,9 @@ box = geom.obj.BoundBox3D(bound_box=bound_box,
 pbd.add_collision(box.collision)
 
 tirender = utils.renderer.TaichiRenderer3D("Discrete Element Method 3D Test",
-                                           res=(800, 800),
+                                           res=(600, 600),
                                            fps=60,
-                                           cameraPos=(5.0, 5.0, 5.0),
+                                           cameraPos=(4.0, 4.0, 4.0),
                                            cameraLookat=(1.0, 1.0, 1.0))
 tirender.add_scene_render_draw(box.get_render_draw())
 tirender.add_scene_render_draw(part3d.get_render_draw())

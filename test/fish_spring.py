@@ -46,7 +46,7 @@ xpbd.add_cons(length)
 xpbd.add_collision(box2d.collision)
 xpbd.init_rest_status()
 
-window = gl_mesh_viewer.OpenGLMeshRenderer2D("GLFW Viewer", res=(700, 700))
+window = gl_mesh_viewer.OpenGLMeshRenderer2D("GLFW Viewer", res=(600, 600))
 window.set_mesh(mesh.v_p.to_numpy(), mesh.uvs, mesh.faces_np, texpath)
 
 view_mode = [True]  # wireframe mode

@@ -29,8 +29,8 @@ lbs = lbs.PointLBS2D(mesh.v_p, mesh.v_p_ref, points.v_weights, mesh.v_invm,
 
 g = ti.Vector([0.0, 0.0])
 fps = 60
-substep = 3
-sovle_step = 5
+substep = 6
+sovle_step = 2
 dt = 1.0 / (fps * substep)
 xpbd = framework.pbd_framework(g=g,
                                n_vert=mesh.n_vert,
@@ -61,7 +61,7 @@ xpbd.add_cons(deform, 0)
 xpbd.add_cons(comp, 1)
 xpbd.init_rest_status()
 
-window = gl_mesh_viewer.OpenGLMeshRenderer2D("GLFW Viewer", res=(700, 700))
+window = gl_mesh_viewer.OpenGLMeshRenderer2D("GLFW Viewer", res=(600, 600))
 window.set_mesh(mesh.v_p.to_numpy(), mesh.uvs, mesh.faces_np, texpath)
 
 view_mode = [
