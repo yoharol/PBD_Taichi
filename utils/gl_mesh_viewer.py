@@ -244,7 +244,7 @@ class OpenGLMeshRenderer2D:
     def mouse_input_event(window, button, action, mods):
       for func in self.mouse_input_callback:
         func(button, action, mods)
-    
+
     def cursor_move_event(window, xpos, ypos):
       for func in self.cursor_move_callback:
         func(float(xpos), float(ypos))
@@ -294,11 +294,12 @@ class OpenGLMeshRenderer2D:
     self.fps_track = True
     self.prev_fps_time = glfw.get_time()
 
-  def set_movie_track(self, max_frames):
+  def set_movie_track(self, max_frames, frame_per_track=1):
     if self.frame_count > 0:
       assert False, 'Error! Movie track mode should be set at the beginning'
     self.movie_track_mode = True
     self.movie_track_frames = max_frames
+    self.frame_per_track = frame_per_track
 
   def get_time(self):
     return glfw.get_time()
@@ -340,8 +341,12 @@ class OpenGLMeshRenderer2D:
                          wireframe: bool,
                          color: tuple = (0.1, 0.4, 1.0, 0.8)):
     self.shaderProgram.set_wireframe_mode(wireframe, color)
-  
-  def draw_lines(self, verts: np.ndarray, edges: np.ndarray, line_width=5.0, line_color=(0.8, 0.0, 0.7)):
+
+  def draw_lines(self,
+                 verts: np.ndarray,
+                 edges: np.ndarray,
+                 line_width=5.0,
+                 line_color=(0.8, 0.0, 0.7)):
     edges = edges.reshape(-1, 2)
     glColor3f(line_color[0], line_color[1], line_color[2])
     glLineWidth(line_width)
@@ -374,7 +379,9 @@ class OpenGLMeshRenderer2D:
 
   def show(self):
     if self.movie_track_mode and self.frame_count < self.movie_track_frames and self.frame_count > 0:
-      self.get_screneshot(f'track/{self.frame_count:05d}.png')
+      if self.frame_count % self.frame_per_track == 0:
+        idx = self.frame_count // self.frame_per_track
+        self.get_screneshot(f'track/{idx:05d}.png')
     if self.movie_track_mode and self.frame_count == self.movie_track_frames:
       print("movie track complete")
     self.fps_count = int(1.0 / (glfw.get_time() - self.prev_time))

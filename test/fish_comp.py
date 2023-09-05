@@ -82,10 +82,10 @@ window.add_key_callback(set_view_mode)
 
 def set_movement():
 
-  t = window.get_time() - 4.0
+  t = window.frame_count - 240
 
   if t > 0.0:
-    angle0 = np.sin(t * 6.0) * 0.35
+    angle0 = np.sin(t * 6.0 / 60) * 0.35
     angle1 = angle0 * 2.0
     lbs.set_control_angle(0, angle0)
     lbs.set_control_pos_from_parent(1, 0, angle0)
