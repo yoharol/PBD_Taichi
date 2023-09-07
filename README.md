@@ -11,6 +11,8 @@ Library for PBD and XPBD, aiming at including most type of constraints on mesh a
 
 ## Environments
 
+Python version 3.9
+
 ```shell
 pip install taichi 
 pip install usd-core
