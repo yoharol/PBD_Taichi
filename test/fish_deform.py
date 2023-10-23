@@ -22,10 +22,10 @@ mesh = gmesh.TrianMesh(verts,
                        repose=(0.1, 0.2))
 mesh.set_texture_uv(uvs)
 
-g = ti.Vector([0.0, -1.5])
+g = ti.Vector([0.0, -1])
 fps = 60
-substep = 10
-sovle_step = 3
+substep = 6
+sovle_step = 2
 dt = 1.0 / (fps * substep)
 
 box2d = obj.BoundBox2D(bound_box=np.array([[0.0, 1.0], [0.0, 1.0]]),

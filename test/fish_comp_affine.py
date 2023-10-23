@@ -6,7 +6,7 @@ from OpenGL.GL import *
 from geom import gmesh, obj
 from utils import parser, gl_mesh_viewer
 from lbs import lbs
-from cons import framework, deform2d, comp
+from cons import framework, deform2d, comp_affine
 
 ti.init(arch=ti.cpu, cpu_max_num_threads=1)
 
@@ -27,10 +27,10 @@ points = lbs.load_points2d_data(tgfpath, weightpath, scale=scale, repose=repose)
 lbs = lbs.PointLBS2D(mesh.v_p, mesh.v_p_ref, points.v_weights, mesh.v_invm,
                      points.c_p, points.c_p_ref)
 
-g = ti.Vector([0.0, 0.0])
+g = ti.Vector([0.0, -10.0])
 fps = 60
-substep = 6
-sovle_step = 2
+substep = 5
+sovle_step = 1
 dt = 1.0 / (fps * substep)
 xpbd = framework.pbd_framework(g=g,
                                n_vert=mesh.n_vert,
@@ -45,16 +45,13 @@ deform = deform2d.Deform2D(dt=dt,
                            face_mass=mesh.f_mass,
                            hydro_alpha=1e-3,
                            devia_alpha=1e-2)
-comp = comp.CompDynPoint2D(v_p=mesh.v_p,
+comp = comp_affine.CompDynAffine2D(v_p=mesh.v_p,
                            v_p_ref=mesh.v_p_ref,
                            v_p_rig=lbs.v_p_rig,
                            v_invm=mesh.v_invm,
-                           c_p=points.c_p,
-                           c_p_ref=points.c_p_ref,
-                           c_rot=lbs.c_rot,
                            v_weights=points.v_weights,
                            dt=dt,
-                           alpha=4e-6)
+                           alpha=1e-6)
 xpbd.add_cons(deform, 0)
 xpbd.add_cons(comp, 1)
 xpbd.init_rest_status()

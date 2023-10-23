@@ -16,9 +16,7 @@ class CompDynPoint2D:
       c_rot: ti.MatrixField,  # control point rotation
       v_weights: ti.Field,  # vertex weights
       dt,
-      alpha=0.0,
-      alpha_fixed=0.0,
-      fixed=[]) -> None:
+      alpha=0.0) -> None:
 
     self.n_vert = v_p.shape[0]
     self.v_p = v_p
@@ -34,18 +32,8 @@ class CompDynPoint2D:
     self.C = ti.field(dtype=ti.f32, shape=(self.n_controls, 3))
     self.delta_lambda = ti.field(dtype=ti.f32, shape=(self.n_controls, 3))
     self.alpha = alpha / (dt * dt)
-    self.alpha_fixed = alpha_fixed / (dt * dt)
-    self.alpha_list = ti.field(dtype=ti.f32, shape=(self.n_controls))
     self.sum_deriv = ti.field(dtype=ti.f32, shape=(self.n_controls, 3))
     self.sum_deriv_cache = ti.field(dtype=ti.f32, shape=(self.n_controls))
-
-    self.set_fixed(fixed)
-
-  def set_fixed(self, fixed):
-    self.fixed = fixed
-    self.alpha_list.fill(self.alpha)
-    for i in fixed:
-      self.alpha_list[i] = self.alpha_fixed
 
   def init_rest_status(self):
     self.compute_deriv_sum()
@@ -90,8 +78,8 @@ class CompDynPoint2D:
       for j in range(3):
         self.delta_lambda[
             i,
-            j] = -(self.C[i, j] + self.alpha_list[i] * self.lambdaf[i, j]) / (
-                self.sum_deriv[i, j] + self.alpha_list[i])
+            j] = -(self.C[i, j] + self.alpha * self.lambdaf[i, j]) / (
+                self.sum_deriv[i, j] + self.alpha)
         self.lambdaf[i, j] += self.delta_lambda[i, j]
 
     for i in range(self.n_vert):
