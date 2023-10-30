@@ -194,6 +194,46 @@ class GL_Mesh2D:
     glDrawElements(GL_TRIANGLES, self.n_faces * 3, GL_UNSIGNED_INT, None)
 
 
+class MeshObj:
+
+  def __init__(self, idx: int, verts: np.ndarray, uvs: np.ndarray,
+               faces: np.ndarray, texpath: str) -> None:
+    self.idx = idx
+    self.verts = verts
+    self.uvs = uvs
+    self.faces = faces
+    self.shaderProgram = Mesh2dShaderProgram()
+    self.shaderProgram.bind()
+
+    self.vao = GL_VAO()
+    self.vao.bind()
+
+    self.gl_mesh = GL_Mesh2D(verts, uvs, faces, dynamic_verts=True)
+    self.texture = GL_Texture2D(texpath, GL_RGBA)
+
+    self.shaderProgram.bind_buffer(self.gl_mesh.vert_buffer,
+                                   self.gl_mesh.uv_buffer)
+    self.shaderProgram.bind_texture(self.texture)
+
+    self.vao.unbind()
+    self.shaderProgram.unbind()
+    self.texture.unbind()
+
+  def set_mesh(self, verts: np.ndarray):
+    self.verts = verts
+    self.gl_mesh.bind()
+    self.gl_mesh.update_verts(verts)
+    self.gl_mesh.unbind()
+
+  def draw(self):
+    self.shaderProgram.bind()
+    self.texture.bind()
+    self.gl_mesh.bind()
+    self.gl_mesh.draw()
+    self.gl_mesh.unbind()
+    self.shaderProgram.unbind()
+
+
 # ! maybe find a method to set which GPU to use
 class OpenGLMeshRenderer2D:
 
@@ -230,6 +270,8 @@ class OpenGLMeshRenderer2D:
     glEnable(GL_LINE_SMOOTH)
 
     glfw.set_input_mode(self.window, glfw.STICKY_KEYS, GL_TRUE)
+
+    self.mesh_objs = []
 
     self.key_input_callback = []
     self.mouse_input_callback = []
@@ -313,34 +355,22 @@ class OpenGLMeshRenderer2D:
   def add_cursor_move_callback(self, func):
     self.cursor_move_callback.append(func)
 
-  def set_mesh(self, verts: np.ndarray, uvs: np.ndarray, faces: np.ndarray,
-               texpath: str):
-    self.verts = verts
-    self.uvs = uvs
-    self.faces = faces
-    self.shaderProgram = Mesh2dShaderProgram()
-    self.shaderProgram.bind()
-
-    self.vao = GL_VAO()
-    self.vao.bind()
-
-    self.gl_mesh = GL_Mesh2D(verts, uvs, faces, dynamic_verts=True)
-    self.texture = GL_Texture2D(texpath, GL_RGBA)
-
-    self.shaderProgram.bind_buffer(self.gl_mesh.vert_buffer,
-                                   self.gl_mesh.uv_buffer)
-    self.shaderProgram.bind_texture(self.texture)
-
-    self.vao.unbind()
-    self.shaderProgram.unbind()
-    self.texture.unbind()
-
+  def set_mesh(self,
+               verts: np.ndarray,
+               uvs: np.ndarray,
+               faces: np.ndarray,
+               texpath: str,
+               idx=0):
+    self.mesh_objs.append(MeshObj(idx, verts, uvs, faces, texpath))
     self.data_set = True
 
   def set_wireframe_mode(self,
                          wireframe: bool,
-                         color: tuple = (0.1, 0.4, 1.0, 0.8)):
-    self.shaderProgram.set_wireframe_mode(wireframe, color)
+                         color: tuple = (0.1, 0.4, 1.0, 0.8),
+                         idx=0):
+    for mesh_obj in self.mesh_objs:
+      if mesh_obj.idx == idx:
+        mesh_obj.shaderProgram.set_wireframe_mode(wireframe, color)
 
   def draw_lines(self,
                  verts: np.ndarray,
@@ -356,11 +386,10 @@ class OpenGLMeshRenderer2D:
       glVertex2f(verts[edge[1], 0] * 2.0 - 1.0, verts[edge[1], 1] * 2.0 - 1.0)
     glEnd()
 
-  def update_mesh(self, verts: np.ndarray):
-    self.verts = verts
-    self.gl_mesh.bind()
-    self.gl_mesh.update_verts(verts)
-    self.gl_mesh.unbind()
+  def update_mesh(self, verts: np.ndarray, idx=0):
+    for mesh_obj in self.mesh_objs:
+      if mesh_obj.idx == idx:
+        mesh_obj.set_mesh(verts)
 
   def pre_update(self):
     self.running = not glfw.window_should_close(self.window)
@@ -370,12 +399,8 @@ class OpenGLMeshRenderer2D:
   def data_render(self):
     assert self.data_set
     glLineWidth(1.0)
-    self.shaderProgram.bind()
-    self.texture.bind()
-    self.gl_mesh.bind()
-    self.gl_mesh.draw()
-    self.gl_mesh.unbind()
-    self.shaderProgram.unbind()
+    for mesh_obj in self.mesh_objs:
+      mesh_obj.draw()
 
   def show(self):
     if self.movie_track_mode and self.frame_count < self.movie_track_frames and self.frame_count > 0:
@@ -408,19 +433,23 @@ class OpenGLMeshRenderer2D:
   def _key_input(self):
     pass
 
-  def get_mesh_png(self, filepath, face_color: np.ndarray):
+  def get_mesh_png(self, filepath, face_color: np.ndarray, idx=0):
+    verts = self.mesh_objs[0].verts
+    faces = self.mesh_objs[0].faces
+    for mesh_obj in self.mesh_objs:
+      if mesh_obj.idx == idx:
+        verts = mesh_obj.verts
+        faces = mesh_obj.faces
     import matplotlib.pyplot as plt
     fig1, ax1 = plt.subplots()
     ax1.set_aspect('equal')
-    tpc = ax1.tripcolor(self.verts[:, 0],
-                        self.verts[:, 1],
-                        self.faces.reshape(self.faces.size // 3, 3),
+    tpc = ax1.tripcolor(verts[:, 0],
+                        verts[:, 1],
+                        faces.reshape(self.faces.size // 3, 3),
                         facecolors=face_color,
                         shading='flat')
     fig1.colorbar(tpc)
     plt.savefig(filepath)
-    # ax1.set_title('Distortion of triangle elements')
-
     plt.show()
 
   def get_screneshot(self, filepath):

@@ -97,7 +97,7 @@ class PointLBS2D:
     self.c_rot[idx][1, 0] = np.sin(angle)
     self.c_rot[idx][1, 1] = np.cos(angle)
 
-  def set_control_pos_from_parent(self, idx: int, parent_idx: int,
+  """def set_control_pos_from_parent(self, idx: int, parent_idx: int,
                                   angle: float):
     p1 = self.c_p_ref_np[idx]
     p0 = self.c_p_ref_np[parent_idx]
@@ -106,7 +106,15 @@ class PointLBS2D:
     p[0] = p_delta_ref[0] * np.cos(angle) - p_delta_ref[1] * np.sin(angle)
     p[1] = p_delta_ref[0] * np.sin(angle) + p_delta_ref[1] * np.cos(angle)
     self.c_p[idx][0] = p[0] + self.c_p[parent_idx][0]
-    self.c_p[idx][1] = p[1] + self.c_p[parent_idx][1]
+    self.c_p[idx][1] = p[1] + self.c_p[parent_idx][1]"""
+
+  @ti.kernel
+  def set_control_pos_from_parent(self, idx: int, parent_idx: int):
+    p1 = self.c_p_ref[idx]
+    p0 = self.c_p_ref[parent_idx]
+    p = ti.Vector.zero(ti.f32, 2)
+    p_delta_ref = p1 - p0
+    self.c_p[idx] = self.c_rot[parent_idx] @ p_delta_ref + self.c_p[parent_idx]
 
   @ti.kernel
   def lbs(self):
@@ -115,6 +123,30 @@ class PointLBS2D:
       for j in range(self.n_points):
         self.v_p_rig[i] += self.v_weights[i, j] * (
             self.c_rot[j] @ (self.v_p_ref[i] - self.c_p_ref[j]) + self.c_p[j])
+
+  @ti.kernel
+  def inverse_affine(self, j: ti.i32):
+    D = ti.Matrix([[0.0, 0.0], [0.0, 0.0]])
+    B = ti.Matrix([[0.0, 0.0], [0.0, 0.0]])
+    for i in range(self.n_verts):
+      p = self.v_p[i] - self.c_p[j]
+      q = self.v_p_ref[i] - self.c_p_ref[j]
+      D += self.v_weights[i, j] * p.outer_product(q) / self.v_invm[i]
+      B += self.v_weights[i, j] * q.outer_product(q) / self.v_invm[i]
+    D = D @ B.inverse()
+    self.c_rot[j] = D
+
+  @ti.kernel
+  def inverse_rotation(self, j: ti.i32):
+    D = ti.Matrix([[0.0, 0.0], [0.0, 0.0]])
+    B = ti.Matrix([[0.0, 0.0], [0.0, 0.0]])
+    for i in range(self.n_verts):
+      p = self.v_p[i] - self.c_p[j]
+      q = self.v_p_ref[i] - self.c_p_ref[j]
+      D += self.v_weights[i, j] * p.outer_product(q) / self.v_invm[i]
+      B += self.v_weights[i, j] * q.outer_product(q) / self.v_invm[i]
+    u, s, v = ti.svd(D @ B.inverse())
+    self.c_rot[j] = u @ v.transpose()
 
   def draw_display_points(self,
                           point_size=25.0,

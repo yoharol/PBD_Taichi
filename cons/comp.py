@@ -42,7 +42,14 @@ class CompDynPoint2D:
     self.lambdaf.fill(0.0)
 
   def update_cons(self):
-    self.solve_cons()
+    # self.solve_cons()
+    for j in range(self.n_controls):
+      self.solve_cons_pos(j)
+      self.solve_cons_rot(j)
+
+  def update_selected_cons(self, j: int):
+    self.solve_cons_pos(j)
+    self.solve_cons_rot(j)
 
   @ti.kernel
   def compute_deriv_sum(self):
@@ -54,40 +61,43 @@ class CompDynPoint2D:
         self.sum_deriv_cache[j] += m * w * w
 
   @ti.kernel
-  def solve_cons(self):
-    self.C.fill(0.0)
-    self.sum_deriv.fill(0.0)
+  def solve_cons_pos(self, j: ti.i32):
+    c = ti.Vector([0.0, 0.0])
 
-    ti.loop_config(serialize=True)
     for i in range(self.n_vert):
       x_c = self.v_p[i] - self.v_p_rig[i]
-      for j in range(self.n_controls):
-        m = 1.0 / self.v_invm[i]
-        w = self.weights[i, j]
-        x = self.c_rot[j] @ (self.v_p_ref[i] - self.c_p_ref[j])
-        self.C[j, 0] += m * w * x_c[0]
-        self.C[j, 1] += m * w * x_c[1]
-        self.C[j, 2] += m * w * x_c.dot(ti.Vector([-x[1], x[0]]))
-        x = x * x
-        self.sum_deriv[j, 2] += m * w * w * (x[1] + x[0])
+      m = 1.0 / self.v_invm[i]
+      w = self.weights[i, j]
+      c += m * w * x_c
 
-    ti.loop_config(serialize=True)
-    for i in range(self.n_controls):
-      self.sum_deriv[i, 0] = self.sum_deriv_cache[i]
-      self.sum_deriv[i, 1] = self.sum_deriv_cache[i]
-      for j in range(3):
-        self.delta_lambda[
-            i,
-            j] = -(self.C[i, j] + self.alpha * self.lambdaf[i, j]) / (
-                self.sum_deriv[i, j] + self.alpha)
-        self.lambdaf[i, j] += self.delta_lambda[i, j]
+    sum_deriv = self.sum_deriv_cache[j]
+    for k in range(2):
+      self.delta_lambda[j, k] = -(c[k] + self.alpha * self.lambdaf[j, k]) / (
+          sum_deriv + self.alpha)
+      self.lambdaf[j, k] += self.delta_lambda[j, k]
 
     for i in range(self.n_vert):
-      delta_x = ti.Vector([0.0, 0.0])
-      for j in range(self.n_controls):
-        w = self.weights[i, j]
-        delta_x += self.delta_lambda[j, 0] * w * ti.Vector([1.0, 0.0])
-        delta_x += self.delta_lambda[j, 1] * w * ti.Vector([0.0, 1.0])
-        x = self.c_rot[j] @ (self.v_p_ref[i] - self.c_p_ref[j])
-        delta_x += self.delta_lambda[j, 2] * w * ti.Vector([-x[1], x[0]])
-      self.v_p[i] += delta_x
+      w = self.weights[i, j]
+      self.v_p[i] += w * ti.Vector(
+          [self.delta_lambda[j, 0], self.delta_lambda[j, 1]])
+
+  @ti.kernel
+  def solve_cons_rot(self, j: ti.i32):
+    c = 0.0
+    sum_deriv = 0.0
+    for i in range(self.n_vert):
+      x_c = self.v_p[i] - self.v_p_rig[i]
+      m = 1.0 / self.v_invm[i]
+      w = self.weights[i, j]
+      x = self.c_rot[j] @ (self.v_p_ref[i] - self.c_p_ref[j])
+      c += m * w * x_c.dot(ti.Vector([-x[1], x[0]]))
+      x = x * x
+      sum_deriv += m * w * w * (x[1] + x[0])
+    self.delta_lambda[j,
+                      2] = -(c + self.alpha * self.lambdaf[j, 2]) / (sum_deriv +
+                                                                     self.alpha)
+    self.lambdaf[j, 2] += self.delta_lambda[j, 2]
+    for i in range(self.n_vert):
+      w = self.weights[i, j]
+      x = self.c_rot[j] @ (self.v_p_ref[i] - self.c_p_ref[j])
+      self.v_p[i] += self.delta_lambda[j, 2] * w * ti.Vector([-x[1], x[0]])

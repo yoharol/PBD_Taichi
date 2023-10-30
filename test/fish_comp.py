@@ -54,7 +54,7 @@ comp = comp.CompDynPoint2D(v_p=mesh.v_p,
                            c_rot=lbs.c_rot,
                            v_weights=points.v_weights,
                            dt=dt,
-                           alpha=4e-6)
+                           alpha=2e-6)
 xpbd.add_cons(deform, 0)
 xpbd.add_cons(comp, 1)
 xpbd.init_rest_status()
@@ -80,13 +80,13 @@ window.add_key_callback(set_view_mode)
 
 def set_movement():
 
-  t = window.frame_count - 240
+  t = window.frame_count - 60
 
   if t > 0.0:
     angle0 = np.sin(t * 6.0 / 60) * 0.35
     angle1 = angle0 * 2.5
     lbs.set_control_angle(0, angle0)
-    lbs.set_control_pos_from_parent(1, 0, angle0)
+    lbs.set_control_pos_from_parent(1, 0)
     lbs.set_control_angle(1, angle1)
 
 
