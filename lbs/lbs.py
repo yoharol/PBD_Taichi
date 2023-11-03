@@ -147,6 +147,20 @@ class PointLBS2D:
       B += self.v_weights[i, j] * q.outer_product(q) / self.v_invm[i]
     u, s, v = ti.svd(D @ B.inverse())
     self.c_rot[j] = u @ v.transpose()
+  
+  @ti.kernel
+  def inverse_mixed(self, j:ti.i32, blend: ti.f32):
+    D = ti.Matrix([[0.0, 0.0], [0.0, 0.0]])
+    B = ti.Matrix([[0.0, 0.0], [0.0, 0.0]])
+    for i in range(self.n_verts):
+      p = self.v_p[i] - self.c_p[j]
+      q = self.v_p_ref[i] - self.c_p_ref[j]
+      D += self.v_weights[i, j] * p.outer_product(q) / self.v_invm[i]
+      B += self.v_weights[i, j] * q.outer_product(q) / self.v_invm[i]
+    D = D @ B.inverse()
+    u, s, v = ti.svd(D)
+    B = u @ v.transpose()
+    self.c_rot[j] = B * blend + D * (1.0 - blend)
 
   def draw_display_points(self,
                           point_size=25.0,

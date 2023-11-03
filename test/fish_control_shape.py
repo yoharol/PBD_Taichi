@@ -37,7 +37,7 @@ xpbd = framework.pbd_framework(g=g,
                                n_vert=mesh.n_vert,
                                v_p=mesh.v_p,
                                dt=dt,
-                               damp=0.991)
+                               damp=0.99)
 deform = deform2d.Deform2D(dt=dt,
                            v_p=mesh.v_p,
                            v_p_ref=mesh.v_p_ref,
@@ -52,7 +52,7 @@ shape = shape_matching.ShapeMatching2D(v_p=mesh.v_p,
                                        v_invm=mesh.v_invm,
                                        v_weights=points.v_weights,
                                        dt=dt,
-                                       alpha=1e-3)
+                                       alpha=4e-3)
 xpbd.add_cons(deform, 0)
 xpbd.init_rest_status()
 
@@ -68,7 +68,7 @@ def set_movement():
   t = window.frame_count - 60
 
   if t > 0.0:
-    angle0 = np.sin(t * 8.0 / 60) * 0.4
+    angle0 = np.sin(t * 8.0 / 60) * 0.3
     lbs.set_control_angle(0, angle0)
     lbs.set_control_pos_from_parent(1, 0)
     lbs.set_control_pos_from_parent(2, 1)
@@ -85,7 +85,7 @@ while window.running:
     shape.update_selected_cons(0)
     for i in range(1, 4):
       lbs.set_control_pos_from_parent(i, i - 1)
-      lbs.inverse_rotation(i)
+      lbs.inverse_mixed(i, 0.9)
       lbs.lbs()
       shape.update_selected_cons(i)
     xpbd.update_vel()
@@ -98,7 +98,7 @@ while window.running:
   glClearColor(0.96, 0.96, 0.96, 1)
 
   window.data_render()
-  # lbs.draw_display_points(fix_point=[0])
+  lbs.draw_display_points(fix_point=[0])
 
   window.show()
 

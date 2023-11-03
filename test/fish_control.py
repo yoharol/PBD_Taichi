@@ -73,7 +73,7 @@ def set_movement():
   t = window.frame_count - 60
 
   if t > 0.0:
-    angle0 = np.sin(t * 8.0 / 60) * 0.2
+    angle0 = np.sin(t * 9.0 / 60) * 0.4
     lbs.set_control_angle(0, angle0)
     lbs.set_control_pos_from_parent(1, 0)
     lbs.set_control_pos_from_parent(2, 1)
@@ -92,7 +92,7 @@ while window.running:
     comp.update_selected_cons(0)
     for i in range(1, 4):
       lbs.set_control_pos_from_parent(i, i - 1)
-      lbs.inverse_rotation(i)
+      lbs.inverse_mixed(i, 1.0)
       lbs.lbs()
       comp.update_selected_cons(i)
     xpbd.update_vel()
