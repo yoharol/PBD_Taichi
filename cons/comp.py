@@ -71,9 +71,10 @@ class CompDynPoint2D:
       c += m * w * x_c
 
     sum_deriv = self.sum_deriv_cache[j]
+    alpha = self.alpha
     for k in range(2):
-      self.delta_lambda[j, k] = -(c[k] + self.alpha * self.lambdaf[j, k]) / (
-          sum_deriv + self.alpha)
+      self.delta_lambda[j, k] = -(c[k] + alpha * self.lambdaf[j, k]) / (
+          sum_deriv + alpha)
       self.lambdaf[j, k] += self.delta_lambda[j, k]
 
     for i in range(self.n_vert):

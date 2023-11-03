@@ -7,7 +7,7 @@ from geom import gmesh, obj
 from utils import parser, gl_mesh_viewer
 
 from lbs import lbs
-from cons import framework, deform2d, comp
+from cons import framework, deform2d, comp, shape_matching
 
 ti.init(arch=ti.cpu, cpu_max_num_threads=1)
 
@@ -24,9 +24,35 @@ verts, faces, uvs = parser.usd_parser(usdpath, "/root/mesh")
 mesh = gmesh.TrianMesh(verts, faces, dim=2, rho=1.0, scale=scale, repose=repose)
 mesh.set_texture_uv(uvs)
 
+
 points = lbs.load_points2d_data(tgfpath, weightpath, scale=scale, repose=repose)
 lbs = lbs.PointLBS2D(mesh.v_p, mesh.v_p_ref, points.v_weights, mesh.v_invm,
                      points.c_p, points.c_p_ref)
+
+weights = points.v_weights.to_numpy()
+weights_propa_np = np.zeros_like(weights)
+parents = [
+  [],
+  [0],
+  [0, 1],
+  [0, 1, 2]
+]
+for i in range(weights.shape[0]):
+  for j in range(weights.shape[1]):
+    weights_propa_np[i, j] = weights[i, j]
+    if weights[i, j] > 0.0:
+      for p in parents[j]:
+        weights_propa_np[i, p] += weights[i, j] * 0.1
+  sumw = 0.0
+  for j in range(weights.shape[1]):
+    sumw += weights_propa_np[i, j]
+  for j in range(weights.shape[1]):
+    weights_propa_np[i, j] /= sumw
+weights_propa = ti.field(ti.f32, weights_propa_np.shape)
+weights_propa.from_numpy(weights_propa_np)
+# points.v_weights.from_numpy(weights_propa)
+
+
 
 g = ti.Vector([0.0, 0.0])
 fps = 60
@@ -46,18 +72,27 @@ deform = deform2d.Deform2D(dt=dt,
                            face_mass=mesh.f_mass,
                            hydro_alpha=1e-3,
                            devia_alpha=1e-3)
-comp = comp.CompDynPoint2D(v_p=mesh.v_p,
+comp_cons = comp.CompDynPoint2D(v_p=mesh.v_p,
                            v_p_ref=mesh.v_p_ref,
                            v_p_rig=lbs.v_p_rig,
                            v_invm=mesh.v_invm,
                            c_p=points.c_p,
                            c_p_ref=points.c_p_ref,
                            c_rot=lbs.c_rot,
-                           v_weights=points.v_weights,
+                           # v_weights=points.v_weights,
+                           v_weights=weights_propa,
                            dt=dt,
-                           alpha=1e-6)
+                           alpha=1e-7)
+shape = shape_matching.ShapeMatching2D(v_p=mesh.v_p,
+                                       v_p_ref=mesh.v_p_ref,
+                                       v_p_rig=lbs.v_p_rig,
+                                       v_invm=mesh.v_invm,
+                                       v_weights=points.v_weights,
+                                       dt=dt,
+                                       alpha=1e-3)
+
 xpbd.add_cons(deform, 0)
-xpbd.add_cons(comp, 1)
+xpbd.add_cons(comp_cons, 1)
 xpbd.init_rest_status()
 
 window = gl_mesh_viewer.OpenGLMeshRenderer2D("GLFW Viewer", res=(600, 600))
@@ -89,7 +124,7 @@ while window.running:
     xpbd.preupdate_cons(1)
     for _ in range(sovle_step):
       xpbd.update_cons(0)
-    comp.update_selected_cons(0)
+    comp_cons.update_selected_cons(0)
     for i in range(1, 4):
       lbs.set_control_pos_from_parent(i, i - 1)
       lbs.inverse_mixed(i, 1.0)
@@ -106,7 +141,7 @@ while window.running:
   glClearColor(0.96, 0.96, 0.96, 1)
 
   window.data_render()
-  # lbs.draw_display_points(fix_point=[0])
+  lbs.draw_display_points(fix_point=[9])
 
   window.show()
 

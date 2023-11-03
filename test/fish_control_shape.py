@@ -52,7 +52,7 @@ shape = shape_matching.ShapeMatching2D(v_p=mesh.v_p,
                                        v_invm=mesh.v_invm,
                                        v_weights=points.v_weights,
                                        dt=dt,
-                                       alpha=4e-3)
+                                       alpha=1e-3)
 xpbd.add_cons(deform, 0)
 xpbd.init_rest_status()
 
